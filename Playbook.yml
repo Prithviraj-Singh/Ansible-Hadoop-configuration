@@ -1,0 +1,83 @@
+- hosts: name
+  vars:
+    - x: "name"
+  tasks:
+    - name: setting up facts
+      set_fact:
+        nameip: '{{  ansible_facts["default_ipv4"]["address"]  }}'
+        cacheable: yes
+
+- hosts: all
+  gather_facts: no
+  tasks:
+    - name: copying hadoop rpm
+      copy:
+        src: /root/hadoop-1.2.1-1.x86_64.rpm
+        dest: /root/hadoop-1.2.1-1.x86_64.rpm
+    - name: copying jdk rpm
+      copy:
+        src: /root/jdk-8u171-linux-x64.rpm
+        dest: /root/jdk-8u171-linux-x64.rpm
+    - block:
+        - name: fetching jdk info
+          command: jps -v
+      rescue:
+        - name: installing jdk
+          command: rpm -i /root/jdk-8u171-linux-x64.rpm
+    - block:
+        - name: fetching hadoop info
+          command: hadoop version
+      rescue:
+        - name: installing hadoop     
+          command: rpm -i /root/hadoop-1.2.1-1.x86_64.rpm --force
+
+- hosts: main
+  gather_facts: no
+  vars:
+    - x: "{{  inventory_hostname[0:4]  }}"
+  tasks:
+    - name: copying configuration file (hdfs-site.xml)
+      template:
+        src: hdfs-site.xml
+        dest: /etc/hadoop/hdfs-site.xml
+    - name: making hadoop folder
+      file:
+        path: "/{{ x }}"
+        state: directory
+
+- hosts: all
+  gather_facts: no
+  tasks:
+    - name: copying configuration file (core-site.xml)
+      template:
+        src: core-site.xml
+        dest: /etc/hadoop/core-site.xml
+  
+
+- hosts: name
+  gather_facts: no
+  tasks:
+    - block:
+        - name: checking if the name node has been already formated
+          command: cat /hadoop/current/VERSION
+      rescue:
+        - name: formating namenode
+          command: hadoop namenode -format -nonInteractive -force
+
+    - name: starting namenode services
+      command: hadoop-daemon.sh start namenode
+      ignore_errors: yes
+
+    - name: opening ports on firewalld
+      firewalld:
+        port: 9001/tcp
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+
+- hosts: data
+  gather_facts: no
+  tasks:
+    - name: starting datanode service
+      command: hadoop-daemon.sh start datanode
