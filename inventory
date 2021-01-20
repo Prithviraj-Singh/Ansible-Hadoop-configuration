@@ -1,0 +1,12 @@
+[data]
+datanode ansible_user=root ansible_ssh_pass=<passwd> ansible_connection=ssh
+
+[name]
+namenode ansible_user=root ansible_ssh_pass=<passwd> ansible_connection=ssh
+
+[client]
+clientnode ansible_user=root ansible_ssh_pass=<passwd> ansible_connection=ssh
+
+[main:children]
+name
+data
