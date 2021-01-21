@@ -42,7 +42,7 @@
         dest: /etc/hadoop/hdfs-site.xml
     - name: making hadoop folder
       file:
-        path: "/{{ x }}"
+        path: "/hadoop"
         state: directory
 
 - hosts: all
